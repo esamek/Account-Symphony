@@ -37,45 +37,101 @@ $(function(){
 
 
 
-// var delay = 0; // play one note every quarter second
-// 		var note = 50; // the MIDI note
-// 		var velocity = 127; // how hard the note hits
-// 		// play the note
-// 		MIDI.setVolume(0, 127);
-// 		MIDI.noteOn(0, note, velocity, delay);
-// 		MIDI.noteOff(0, note, delay + 0.75);
-
-
-AccountSymphony.init = function(){
-	
+AccountSymphony.init = function(){	
+	this.tracks = [];
+	this.createTrack();
 
 
 
 };
 
+AccountSymphony.getKey = function(note){
+	return MIDI.noteToKey[note];
+};
 
-MIDI.loadPlugin({
-	soundfontUrl: "./soundfont/",
-	instrument: "acoustic_grand_piano",
-	callback: function(){
-		MIDI.setVolume(0, 127);
-		var data = _randomData();
+AccountSymphony.addTrack = function(data){
+	var track = this.createTrack(data);
+	this.tracks.push(track);
+};
 
-		var balances = data.accountData[0].balances;
+AccountSymphony.createTrack = function(D){
 
-		var note = 50;
-		var vel = 127;
-		var delay = 0;
-		balances.forEach(function(d,i){
-			MIDI.noteOn(1, note, vel, delay);
-			MIDI.noteOff(1, note, delay + 0.75);
+	var data = D || _randomData();
+	var balances = data.accountData[0].balances;
+	var START_NOTE = 50;
+	var NOTE = START_NOTE;
+	var _key = this.getKey;
 
-			note += d.change > 0 ? 1 : -1;
-		});
-	}
-});
+	var NOTE_EVENTS = [];
+	
+
+	balances.forEach(function(d){
+		var _note = _key(NOTE);
+		console.log(_note);
+		var _noteEvent = MidiEvent.createNote( _note );
+		NOTE_EVENTS.push(_noteEvent[0]);
+		NOTE_EVENTS.push(_noteEvent[1]);
+		NOTE += d.change > 0 ? 1 : -1;
+	});
+
+	var track = new MidiTrack({events: NOTE_EVENTS});
+	
+	return track;
+
+	 var song = MidiWriter({tracks: [track]});
+
+	 
+	 this.song = song;
+
+};
 
 
+MIDI.loadPlugin(function() {
+	AccountSymphony.init();
+	var player = MIDI.Player;
+
+	player.loadFile("data:audio/midi;base64," + AccountSymphony.song.b64, function(){
+		player.start();
+	})
+
+
+	//MIDI.noteOn(0, 100, 127, 0); // plays note once loaded
+ 	// 	var data = _randomData();
+
+		// var balances = data.accountData[0].balances;
+		// var SONG = [];
+		// var START_NOTE = 100;
+		// var NOTE = START_NOTE;
+		// var vel = 127;
+		// var delay = 0;
+		// MIDI.setVolume(0, 127);
+		// balances.forEach(function(d,i){
+		// 	SONG.push(NOTE);
+		// 	NOTE += d.change > 0 ? 1 : -1;
+		// });
+
+		// var SPEED = 250;
+		// var note = 0;
+		// var cursor = 0;
+		// function play(){
+		// 	setTimeout(function(){
+		// 		MIDI.noteOn(0,SONG[note],127,0);
+		// 		if(note < SONG.length){
+		// 			note++;
+		// 			cursor += SPEED;
+		// 			play();
+		// 		}
+		// 	}, cursor);
+		// }
+		
+		
+		// play();
+
+
+
+
+
+}, "soundfont/acoustic_grand_piano-ogg.js");
 
 
 
